@@ -25,7 +25,7 @@ export default {
     color $color-theme
     font-size 0
     .icon
-      display inline
+      display inline-block
       vertical-align top
       width 30px
       height 32px
@@ -38,7 +38,7 @@ export default {
       vertical-align top
       line-height 44px
       font-size $font-size-large
-    .icon-mine
+    .mine
       position absolute
       top 0
       right 0

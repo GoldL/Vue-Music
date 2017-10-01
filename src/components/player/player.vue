@@ -66,30 +66,33 @@
               <i @click="next" class="icon-next"></i>
             </div>
             <div class="icon i-right">
-              <i class="icon"></i>
+              <i @click="toggleFavorite(currentSong)" class="icon" :class="getFavoriteIcon(currentSong)"></i>
             </div>
           </div>
         </div>
       </div>
     </transition>
     <!--播放页面小屏 底部-->
-    <div class="mini-player" v-show="!fullScreen" @click="open">
-      <div class="icon">
-        <img alt="" :src="currentSong.image" width="40" height="40" :class="cdCls">
+    <transition name="mini">
+      <div class="mini-player" v-show="!fullScreen" @click="open">
+        <div class="icon">
+          <img alt="" :src="currentSong.image" width="40" height="40" :class="cdCls">
+        </div>
+        <div class="text">
+          <h2 class="name" v-html="currentSong.name"></h2>
+          <p class="desc" v-html="currentSong.singer"></p>
+        </div>
+        <div class="control">
+          <progress-circle :radius="radius" :percent="percent">
+            <i @click.stop="togglePlaying" class="icon-mini" :class="miniIcon"></i>
+          </progress-circle>
+        </div>
+        <div class="control" @click.stop="showPlaylist">
+          <i class="icon-playlist"></i>
+        </div>
       </div>
-      <div class="text">
-        <h2 class="name" v-html="currentSong.name"></h2>
-        <p class="desc" v-html="currentSong.singer"></p>
-      </div>
-      <div class="control">
-        <progress-circle :radius="radius" :percent="percent">
-          <i @click.stop="togglePlaying" class="icon-mini" :class="miniIcon"></i>
-        </progress-circle>
-      </div>
-      <div class="control">
-        <i class="icon-playlist"></i>
-      </div>
-    </div>
+    </transition>
+    <playlist ref="playlist"></playlist>
     <!-- 音频播放 -->
     <audio :src="currentSong.url" ref="audio" @play="ready" @error="error" @timeupdate="updateTime" @ended="ended"></audio>
   </div>
@@ -97,7 +100,7 @@
 
 <script>
 import { playMode } from 'common/js/config'
-import { mapGetters, mapMutations } from 'vuex'
+import { mapGetters, mapMutations, mapActions } from 'vuex'
 import animations from 'create-keyframe-animation'
 import Lyric from 'lyric-parser'
 import { prefixStyle } from 'common/js/dom'
@@ -105,6 +108,7 @@ import { playerMixin } from 'common/js/mixin'
 import ProgressBar from 'base/progress-bar/progress-bar'
 import ProgressCircle from 'base/progress-circle/progress-circle'
 import Scroll from 'base/scroll/scroll'
+import Playlist from 'components/playlist/playlist'
 
 const transform = prefixStyle('transform')
 const transitionDuration = prefixStyle('transitionDuration')
@@ -113,7 +117,8 @@ export default {
   components: {
     ProgressBar,
     ProgressCircle,
-    Scroll
+    Scroll,
+    Playlist
   },
   mixins: [playerMixin],
   data() {
@@ -190,9 +195,9 @@ export default {
     this.touch = {}
   },
   methods: {
-    ...mapMutations({
-      setFullScreen: 'SET_FULL_SCREEN'
-    }),
+    showPlaylist() {
+      this.$refs.playlist.show()
+    },
     back() {
       this.setFullScreen(false)
     },
@@ -340,6 +345,7 @@ export default {
     // 防止快速点击 产生错误
     ready() {
       this.songReady = true
+      this.savePlayHistory(this.currentSong)
     },
     error() {
       this.songReady = true
@@ -442,7 +448,13 @@ export default {
         y,
         scale
       }
-    }
+    },
+    ...mapMutations({
+      setFullScreen: 'SET_FULL_SCREEN'
+    }),
+    ...mapActions([
+      'savePlayHistory'
+    ])
   }
 }
 </script>
@@ -639,6 +651,10 @@ export default {
       width 100%
       height 60px
       background $color-highlight-background
+      &.mini-enter-active, &.mini-leave-active
+        transition all 0.4s
+      &.mini-enter, &.mini-leave-to
+        opacity 0
       .icon
         flex 0 0 40px
         width 40px
