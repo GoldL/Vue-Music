@@ -10,7 +10,13 @@ import store from './store'
 
 import 'common/stylus/index.styl'
 
+/* eslint-disable no-unused-vars */
+// import vConsole from 'vconsole'
+
+console.log('test')
+
 Vue.config.productionTip = false
+
 // fastclick解决浏览器点击事件延迟300毫秒
 fastclick.attach(document.body)
 Vue.use(VueLazyLoad, {

@@ -107,7 +107,7 @@ export default {
   },
   methods: {
     refresh() {
-      this.$refs.listView.refresh()
+      this.$refs.listview.refresh()
     },
     onShortcutTouchStart(e) {
       // let anchorIndex = e.target.dataset.index 也可这样直接取得data-index的值
