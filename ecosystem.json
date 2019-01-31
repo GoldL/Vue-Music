@@ -20,6 +20,7 @@
       "repo": "git@gitee.com:iGolden/Vue-Music.git",
       "path": "/www/vue-music/production",
       "ssh_options": "StrictHostKeyChecking=no",
+      "post-deploy" : "npm install && pm2 startOrRestart ecosystem.json --env production",
       "env": {
         "NODE_ENV": "production"
       }
