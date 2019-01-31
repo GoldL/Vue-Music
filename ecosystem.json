@@ -1,0 +1,28 @@
+{
+  "apps": [
+    {
+      "name": "vue-music",
+      "script": "prod.server.js",
+      "env": {
+        "COMMON_VARIABLE": "true"
+      },
+      "env_production": {
+        "NODE_ENV": "production"
+      }
+    }
+  ],
+  "deploy": {
+    "production": {
+      "user": "manager",
+      "host": ["129.211.44.134"],
+      "port": "39999",
+      "ref": "origin/master",
+      "repo": "git@gitee.com:iGolden/Vue-Music.git",
+      "path": "/www/vue-music/production",
+      "ssh_options": "StrictHostKeyChecking=no",
+      "env": {
+        "NODE_ENV": "production"
+      }
+    }
+  }
+}
