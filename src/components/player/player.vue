@@ -1,6 +1,12 @@
 <template>
   <div class="player" v-show="playList.length>0">
-    <transition name="normal" @enter="enter" @after-enter="afterEnter" @leave="leave" @after-leave="afterLeave">
+    <transition
+      name="normal"
+      @enter="enter"
+      @after-enter="afterEnter"
+      @leave="leave"
+      @after-leave="afterLeave"
+    >
       <!--播放页面全屏-->
       <div class="normal-player" v-show="fullScreen">
         <!--背景 模糊-->
@@ -16,7 +22,12 @@
           <h2 class="subtitle" v-html="currentSong.singer"></h2>
         </div>
         <!--中间cd部分-->
-        <div class="middle" @touchstart.prevent="middleTouchStart" @touchmove.prevent="middleTouchMove" @touchend="middleTouchEnd">
+        <div
+          class="middle"
+          @touchstart.prevent="middleTouchStart"
+          @touchmove.prevent="middleTouchMove"
+          @touchend="middleTouchEnd"
+        >
           <div class="middle-l" ref="middleL">
             <div class="cd-wrapper" ref="cdWrapper">
               <div class="cd" :class="cdCls">
@@ -24,17 +35,19 @@
               </div>
             </div>
             <div class="playing-lyric-wrapper">
-              <div class="playing-lyric">
-                {{playingLyric}}
-              </div>
+              <div class="playing-lyric">{{playingLyric}}</div>
             </div>
           </div>
           <scroll class="middle-r" ref="lyricList" :data="currentLyric && currentLyric.lines">
             <div class="lyric-wrapper">
               <div v-if="currentLyric">
-                <p ref="lyricLine" class="text" :class="{'current': currentLineNum ===index}" v-for="(line,index) in currentLyric.lines">
-                  {{line.txt}}
-                </p>
+                <p
+                  ref="lyricLine"
+                  class="text"
+                  :class="{'current': currentLineNum ===index}"
+                  :key="index"
+                  v-for="(line,index) in currentLyric.lines"
+                >{{line.txt}}</p>
               </div>
             </div>
           </scroll>
@@ -66,7 +79,11 @@
               <i @click="next" class="icon-next"></i>
             </div>
             <div class="icon i-right">
-              <i @click="toggleFavorite(currentSong)" class="icon" :class="getFavoriteIcon(currentSong)"></i>
+              <i
+                @click="toggleFavorite(currentSong)"
+                class="icon"
+                :class="getFavoriteIcon(currentSong)"
+              ></i>
             </div>
           </div>
         </div>
@@ -76,7 +93,7 @@
     <transition name="mini">
       <div class="mini-player" v-show="!fullScreen" @click="open">
         <div class="icon">
-          <img alt="" :src="currentSong.image" width="40" height="40" :class="cdCls">
+          <img alt :src="currentSong.image" width="40" height="40" :class="cdCls">
         </div>
         <div class="text">
           <h2 class="name" v-html="currentSong.name"></h2>
@@ -94,12 +111,21 @@
     </transition>
     <playlist ref="playlist"></playlist>
     <!-- 音频播放 -->
-    <audio :src="currentSong.url" ref="audio" @play="ready" @error="error" @timeupdate="updateTime" @ended="ended"></audio>
+    <audio
+      :src="currentSongUrl"
+      ref="audio"
+      id="audio-player"
+      @play="ready"
+      @error="error"
+      @timeupdate="updateTime"
+      @ended="ended"
+    ></audio>
   </div>
 </template>
 
 <script>
 import { playMode } from 'common/js/config'
+import { getSongVkey } from 'api/song'
 import { mapGetters, mapMutations, mapActions } from 'vuex'
 import animations from 'create-keyframe-animation'
 import Lyric from 'lyric-parser'
@@ -113,6 +139,23 @@ import Playlist from 'components/playlist/playlist'
 const transform = prefixStyle('transform')
 const transitionDuration = prefixStyle('transitionDuration')
 
+// 创建页面监听，页面加载完毕--触发音频播放
+document.addEventListener('DOMContentLoaded', function () {
+  function audioAutoPlay () {
+    let audioPlayer = document.getElementById('audio-player')
+    audioPlayer.play()
+  }
+  audioAutoPlay()
+})
+// 创建触摸监听，当浏览器打开页面时，触摸屏幕触发事件，进行音频播放
+document.addEventListener('touchstart', function () {
+  function audioAutoPlay () {
+    let audioPlayer = document.getElementById('audio-player')
+    audioPlayer.play()
+  }
+  audioAutoPlay()
+})
+
 export default {
   components: {
     ProgressBar,
@@ -121,7 +164,7 @@ export default {
     Playlist
   },
   mixins: [playerMixin],
-  data() {
+  data () {
     return {
       songReady: false,
       currentTime: 0,
@@ -129,36 +172,41 @@ export default {
       currentLyric: null,
       currentLineNum: 0,
       currentShow: 'cd',
-      playingLyric: ''
+      playingLyric: '',
+      currentSongUrl: undefined
     }
   },
   watch: {
-    currentSong(newSong, oldSong) {
+    currentSong (newSong, oldSong) {
       if (!newSong.id) {
         return
       }
       if (newSong.id === oldSong.id) {
         return
       }
-      if (this.currentLyric) {
-        this.currentLyric.stop()
-        this.currentTime = 0
-        this.playingLyric = ''
-        this.currentLineNum = 0
-      }
-      clearTimeout(this.timer)
-      this.timer = setTimeout(() => {
-        this.$refs.audio.play()
-        this.getLyric()
-      }, 1000)
+      getSongVkey(this.currentSong.mid).then(res => {
+        const { vkey } = res.data.items[0]
+        this.currentSongUrl = `${this.currentSong.url}&vkey=${vkey}`
+        if (this.currentLyric) {
+          this.currentLyric.stop()
+          this.currentTime = 0
+          this.playingLyric = ''
+          this.currentLineNum = 0
+        }
+        clearTimeout(this.timer)
+        this.timer = setTimeout(() => {
+          this.$refs.audio.play()
+          this.getLyric()
+        }, 1000)
+      })
     },
-    playing(newPlaying) {
+    playing (newPlaying) {
       const audio = this.$refs.audio
       this.$nextTick(() => {
         newPlaying ? audio.play() : audio.pause()
       })
     },
-    fullScreen(newVal) {
+    fullScreen (newVal) {
       if (newVal) {
         setTimeout(() => {
           this.$refs.lyricList.refresh()
@@ -172,39 +220,39 @@ export default {
       'fullScreen',
       'playing'
     ]),
-    cdCls() {
+    cdCls () {
       return this.playing ? 'play' : 'play pause'
     },
-    playIcon() {
+    playIcon () {
       return this.playing ? 'icon-pause' : 'icon-play'
     },
-    miniIcon() {
+    miniIcon () {
       return this.playing ? 'icon-pause-mini' : 'icon-play-mini'
     },
-    disableCls() {
+    disableCls () {
       return this.songReady ? '' : 'disable'
     },
-    percent() {
+    percent () {
       return this.currentTime / this.currentSong.duration
     },
-    iconMode() {
+    iconMode () {
       return this.mode === playMode.sequence ? 'icon-sequence' : this.mode === playMode.loop ? 'icon-loop' : 'icon-random'
     }
   },
-  created() {
+  created () {
     this.touch = {}
   },
   methods: {
-    showPlaylist() {
+    showPlaylist () {
       this.$refs.playlist.show()
     },
-    back() {
+    back () {
       this.setFullScreen(false)
     },
-    open() {
+    open () {
       this.setFullScreen(true)
     },
-    onProgressBarChange(percent) {
+    onProgressBarChange (percent) {
       const currentTime = this.currentSong.duration * percent
       this.$refs.audio.currentTime = currentTime
       if (!this.playing) {
@@ -214,7 +262,7 @@ export default {
         this.currentLyric.seek(currentTime * 1000)
       }
     },
-    middleTouchStart(e) {
+    middleTouchStart (e) {
       this.touch.initiated = true
       // 用来判断是否是一次移动
       this.touch.moved = false
@@ -222,7 +270,7 @@ export default {
       this.touch.startX = touch.pageX
       this.touch.startY = touch.pageY
     },
-    middleTouchMove(e) {
+    middleTouchMove (e) {
       if (!this.touch.initiated) {
         return
       }
@@ -243,7 +291,7 @@ export default {
       this.$refs.middleL.style.opacity = 1 - this.touch.percent
       this.$refs.middleL.style[transitionDuration] = 0
     },
-    middleTouchEnd() {
+    middleTouchEnd () {
       if (!this.touch.moved) {
         return
       }
@@ -276,7 +324,7 @@ export default {
       this.touch.initiated = false
     },
     // 获取歌词
-    getLyric() {
+    getLyric () {
       this.currentSong.getLyric().then((lyric) => {
         if (this.currentSong.lyric !== lyric) {
           return
@@ -291,7 +339,7 @@ export default {
         this.currentLineNum = 0
       })
     },
-    handleLyric({ lineNum, txt }) {
+    handleLyric ({ lineNum, txt }) {
       this.currentLineNum = lineNum
       if (lineNum > 5) {
         let lineEl = this.$refs.lyricLine[lineNum - 5]
@@ -302,7 +350,7 @@ export default {
       this.playingLyric = txt
     },
     // 动画效果
-    enter(el, done) {
+    enter (el, done) {
       const { x, y, scale } = this._getPosAndScale()
 
       let animation = {
@@ -328,33 +376,37 @@ export default {
 
       animations.runAnimation(this.$refs.cdWrapper, 'move', done)
     },
-    afterEnter() {
+    afterEnter () {
       animations.unregisterAnimation('move')
       this.$refs.cdWrapper.style.animation = ''
     },
-    leave(el, done) {
+    leave (el, done) {
       this.$refs.cdWrapper.style.transition = 'all 0.4s'
       const { x, y, scale } = this._getPosAndScale()
       this.$refs.cdWrapper.style[transform] = `translate3d(${x}px,${y}px,0) scale(${scale})`
       this.$refs.cdWrapper.addEventListener('transitionend', done)
     },
-    afterLeave() {
+    afterLeave () {
       this.$refs.cdWrapper.style.transition = ''
       this.$refs.cdWrapper.style[transform] = ''
     },
     // 防止快速点击 产生错误
-    ready() {
+    ready () {
       this.songReady = true
+      if (!this.currentSong.url) {
+        return
+      }
       this.savePlayHistory(this.currentSong)
     },
-    error() {
+    error () {
+      this.currentSongUrl = undefined
       this.songReady = true
     },
     // 监听歌曲进度
-    updateTime(e) {
+    updateTime (e) {
       this.currentTime = e.target.currentTime
     },
-    ended() {
+    ended () {
       if (this.mode === playMode.loop) {
         this.loop()
       } else {
@@ -362,7 +414,7 @@ export default {
       }
     },
     // 歌曲前进后退
-    prev() {
+    prev () {
       if (!this.songReady) {
         return
       }
@@ -381,7 +433,7 @@ export default {
       }
       this.songReady = false
     },
-    next() {
+    next () {
       if (!this.songReady) {
         return
       }
@@ -401,7 +453,7 @@ export default {
       this.songReady = false
     },
     // 设置playing状态 watch playing的变化 实现播放暂停
-    togglePlaying() {
+    togglePlaying () {
       if (!this.songReady) {
         return
       }
@@ -411,7 +463,7 @@ export default {
         this.currentLyric.togglePlay()
       }
     },
-    loop() {
+    loop () {
       this.$refs.audio.currentTime = 0
       this.$refs.audio.play()
 
@@ -420,13 +472,13 @@ export default {
         this.currentLyric.seek(0)
       }
     },
-    format(interval) {
+    format (interval) {
       interval = interval | 0
       const minute = interval / 60 | 0
       const second = this._pad(interval % 60)
       return `${minute}:${second}`
     },
-    _pad(num, n = 2) {
+    _pad (num, n = 2) {
       let len = num.toString().length
       while (len < n) {
         num = '0' + num
@@ -434,7 +486,7 @@ export default {
       }
       return num
     },
-    _getPosAndScale() {
+    _getPosAndScale () {
       const targetWidth = 40
       const paddingLeft = 40
       const paddingBottom = 30
@@ -460,241 +512,239 @@ export default {
 </script>
 
 <style lang="stylus" scoped>
-  @import '~common/stylus/variable'
-  @import '~common/stylus/mixin'
-
-  .player
-    .normal-player
-      position fixed
+@import '~common/stylus/variable'
+@import '~common/stylus/mixin'
+.player
+  .normal-player
+    position fixed
+    left 0
+    right 0
+    top 0
+    bottom 0
+    z-index 150
+    background $color-background
+    .background
+      position absolute
       left 0
-      right 0
       top 0
-      bottom 0
-      z-index 150
-      background $color-background
-      .background
+      width 100%
+      height 100%
+      z-index -1
+      opacity 0.6
+      filter blur(20px)
+    .top
+      position relative
+      margin-bottom 25px
+      .back
         position absolute
-        left 0
         top 0
-        width 100%
-        height 100%
-        z-index -1
-        opacity 0.6
-        filter blur(20px)
-      .top
+        left 6px
+        z-index 50
+        .icon-back
+          display block
+          padding 9px
+          font-size $font-size-large-x
+          color $color-theme
+          transform rotate(-90deg)
+      .title
+        width 70%
+        margin 0 auto
+        line-height 40px
+        text-align center
+        no-wrap()
+        font-size $font-size-large
+        color $color-text
+      .subtitle
+        line-height 20px
+        text-align center
+        font-size $font-size-medium
+        color $color-text
+    .middle
+      position fixed
+      width 100%
+      top 80px
+      bottom 170px
+      white-space nowrap
+      font-size 0
+      .middle-l
+        display inline-block
+        vertical-align top
         position relative
-        margin-bottom 25px
-        .back
-          position absolute
-          top 0
-          left 6px
-          z-index 50
-          .icon-back
-            display block
-            padding 9px
-            font-size $font-size-large-x
-            color $color-theme
-            transform rotate(-90deg)
-        .title
-          width 70%
-          margin 0 auto
-          line-height 40px
-          text-align center
-          no-wrap()
-          font-size $font-size-large
-          color $color-text
-        .subtitle
-          line-height 20px
-          text-align center
-          font-size $font-size-medium
-          color $color-text
-      .middle
-        position fixed
         width 100%
-        top 80px
-        bottom 170px
-        white-space nowrap
-        font-size 0
-        .middle-l
-          display inline-block
-          vertical-align top
-          position relative
-          width 100%
-          height 0
-          padding-top 80%
-          .cd-wrapper
-            position absolute
-            left 10%
-            top 0
-            width 80%
+        height 0
+        padding-top 80%
+        .cd-wrapper
+          position absolute
+          left 10%
+          top 0
+          width 80%
+          height 100%
+          .cd
+            width 100%
             height 100%
-            .cd
+            box-sizing border-box
+            border 10px solid rgba(255, 255, 255, 0.1)
+            border-radius 50%
+            &.play
+              animation rotate 20s linear infinite
+            &.pause
+              animation-play-state paused
+            .image
+              position absolute
+              left 0
+              top 0
               width 100%
               height 100%
-              box-sizing border-box
-              border 10px solid rgba(255, 255, 255, 0.1)
               border-radius 50%
-              &.play
-                animation rotate 20s linear infinite
-              &.pause
-                animation-play-state paused
-              .image
-                position absolute
-                left 0
-                top 0
-                width 100%
-                height 100%
-                border-radius 50%
-
-          .playing-lyric-wrapper
-            width 80%
-            margin 30px auto 0 auto
-            overflow hidden
-            text-align center
-            .playing-lyric
-              height 20px
-              line-height 20px
-              font-size $font-size-medium
-              color $color-text-l
-        .middle-r
-          display inline-block
-          vertical-align top
-          width 100%
-          height 100%
-          overflow hidden
-          .lyric-wrapper
-            width 80%
-            margin 0 auto
-            overflow hidden
-            text-align center
-            .text
-              line-height 32px
-              color $color-text-l
-              font-size $font-size-medium
-              &.current
-               color $color-text
-      .bottom
-        position absolute
-        bottom 50px
-        width 100%
-        .dot-wrapper
-          text-align center
-          font-size 0
-          .dot
-            display inline-block
-            vertical-align middle
-            margin 0 4px
-            width 8px
-            height 8px
-            border-radius 50%
-            background $color-text-l
-            &.active
-              width 20px
-              border-radius 5px
-              background $color-text-ll
-        .progress-wrapper
-          display flex
-          align-items center
+        .playing-lyric-wrapper
           width 80%
-          margin 0px auto
-          padding 10px 0
-          .time
-            color $color-text
-            font-size $font-size-small
-            flex 0 0 30px
-            line-height 30px
-            width 30px
-            &.time-l
-              text-align: left
-            &.time-r
-              text-align right
-          .progress-bar-wrapper
-            flex 1
-        .operators
-          display flex
-          align-items center
-          .icon
-            flex 1
-            color $color-theme
-            &.disable
-              color $color-theme-d
-            i
-              font-size 30px
-          .i-left
-            text-align right
-          .i-center
-            padding 0 20px
-            text-align center
-            i
-              font-size 40px
-          .i-right
-            text-align left
-          .icon-favorite
-            color $color-sub-theme
-      &.normal-enter-active, &.normal-leave-active
-        transition all 0.4s
-        .top, .bottom
-          transition all 0.4s cubic-bezier(0.86, 0.18, 0.82, 1.32)
-      &.normal-enter, &.normal-leave-to
-        opacity 0
-        .top
-          transform translate3d(0, -100px, 0)
-        .bottom
-          transform translate3d(0, 100px, 0)
-    .mini-player
-      display flex
-      align-items center
-      position fixed
-      left 0
-      bottom 0
-      z-index 180
-      width 100%
-      height 60px
-      background $color-highlight-background
-      &.mini-enter-active, &.mini-leave-active
-        transition all 0.4s
-      &.mini-enter, &.mini-leave-to
-        opacity 0
-      .icon
-        flex 0 0 40px
-        width 40px
-        padding 0 10px 0 20px
-        img
-          border-radius 50%
-          &.play
-            animation rotate 10s linear infinite
-          &.pause
-            animation-play-state paused
-      .text
-        display flex
-        flex-direction column
-        flex 1
-        line-height 20px
+          margin 30px auto 0 auto
+          overflow hidden
+          text-align center
+          .playing-lyric
+            height 20px
+            line-height 20px
+            font-size $font-size-medium
+            color $color-text-l
+      .middle-r
+        display inline-block
+        vertical-align top
+        width 100%
+        height 100%
         overflow hidden
-        .name
-          margin-bottom 2px
-          no-wrap()
-          font-size $font-size-medium
+        .lyric-wrapper
+          width 80%
+          margin 0 auto
+          overflow hidden
+          text-align center
+          .text
+            line-height 32px
+            color $color-text-l
+            font-size $font-size-medium
+            &.current
+              color $color-text
+    .bottom
+      position absolute
+      bottom 50px
+      width 100%
+      .dot-wrapper
+        text-align center
+        font-size 0
+        .dot
+          display inline-block
+          vertical-align middle
+          margin 0 4px
+          width 8px
+          height 8px
+          border-radius 50%
+          background $color-text-l
+          &.active
+            width 20px
+            border-radius 5px
+            background $color-text-ll
+      .progress-wrapper
+        display flex
+        align-items center
+        width 80%
+        margin 0px auto
+        padding 10px 0
+        .time
           color $color-text
-        .desc
-          no-wrap()
           font-size $font-size-small
-          color $color-text-d
-      .control
-        flex 0 0 30px
-        width 30px
-        padding 0 10px
-        .icon-play-mini, .icon-pause-mini, .icon-playlist
-          font-size 30px
-          color $color-theme-d
-        .icon-mini
-          font-size 32px
-          position absolute
-          top 0
-          left 0
-  @keyframes rotate
-    0%
-      transform rotate(0)
-    100%
-      transform rotate(360deg)
+          flex 0 0 30px
+          line-height 30px
+          width 30px
+          &.time-l
+            text-align left
+          &.time-r
+            text-align right
+        .progress-bar-wrapper
+          flex 1
+      .operators
+        display flex
+        align-items center
+        .icon
+          flex 1
+          color $color-theme
+          &.disable
+            color $color-theme-d
+          i
+            font-size 30px
+        .i-left
+          text-align right
+        .i-center
+          padding 0 20px
+          text-align center
+          i
+            font-size 40px
+        .i-right
+          text-align left
+        .icon-favorite
+          color $color-sub-theme
+    &.normal-enter-active, &.normal-leave-active
+      transition all 0.4s
+      .top, .bottom
+        transition all 0.4s cubic-bezier(0.86, 0.18, 0.82, 1.32)
+    &.normal-enter, &.normal-leave-to
+      opacity 0
+      .top
+        transform translate3d(0, -100px, 0)
+      .bottom
+        transform translate3d(0, 100px, 0)
+  .mini-player
+    display flex
+    align-items center
+    position fixed
+    left 0
+    bottom 0
+    z-index 180
+    width 100%
+    height 60px
+    background $color-highlight-background
+    &.mini-enter-active, &.mini-leave-active
+      transition all 0.4s
+    &.mini-enter, &.mini-leave-to
+      opacity 0
+    .icon
+      flex 0 0 40px
+      width 40px
+      padding 0 10px 0 20px
+      img
+        border-radius 50%
+        &.play
+          animation rotate 10s linear infinite
+        &.pause
+          animation-play-state paused
+    .text
+      display flex
+      flex-direction column
+      flex 1
+      line-height 20px
+      overflow hidden
+      .name
+        margin-bottom 2px
+        no-wrap()
+        font-size $font-size-medium
+        color $color-text
+      .desc
+        no-wrap()
+        font-size $font-size-small
+        color $color-text-d
+    .control
+      flex 0 0 30px
+      width 30px
+      padding 0 10px
+      .icon-play-mini, .icon-pause-mini, .icon-playlist
+        font-size 30px
+        color $color-theme-d
+      .icon-mini
+        font-size 32px
+        position absolute
+        top 0
+        left 0
+@keyframes rotate
+  0%
+    transform rotate(0)
+  100%
+    transform rotate(360deg)
 </style>
