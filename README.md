@@ -2,7 +2,7 @@
 ------
 
 #### 概述
-  项目是基于Vue.js,成品是一个Vue2.0开发企业级移动端音乐Web App，来源于imooc的实战课程[《Vue2.5开发去哪儿网App从零基础入门到实战项目》](https://coding.imooc.com/class/107.html)，自己动手实践并加以拓展，仅供自己学习使用。
+  项目是基于Vue.js,成品是一个Vue2.0开发企业级移动端音乐Web App，来源于imooc的实战课程[《Vue2.0开发企业级移动端音乐Web App》](https://coding.imooc.com/class/107.html)，自己动手实践并加以拓展，仅供自己学习使用。
   项目的大致流程是Vue-cli构建开发环境，分析需求，设计构思，规划目录结构，开始编程。
 
 #### 技术栈
