@@ -58,6 +58,8 @@ export function getSongList(disstid) {
   return axios.get(url, {
     params: data
   }).then(res => {
-    return Promise.resolve(res.data)
+    let result = res.data.substring(21, res.data.length - 1)
+    result = JSON.parse(result)
+    return Promise.resolve(result)
   })
 }
